@@ -24,8 +24,6 @@ final class TutorialFlow {
         let l = PuzzleData.lessons[index]
         board = Board(puzzle: l.puzzle, tier: nil, groveNumber: index + 1, allowHints: false)
     }
-
-    func skipToHome() {}
 }
 
 struct TutorialView: View {
@@ -36,13 +34,19 @@ struct TutorialView: View {
 
     @Environment(\.palette) private var palette
     @State private var showUnlock: Bool = false
+    @State private var errorMessage: String? = nil
+    @State private var stuckHint: String? = nil
+
+    private let coachingHeight: CGFloat = 56
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
-                .padding(.bottom, 14)
-            banner
-                .padding(.bottom, 16)
+                .padding(.bottom, 10)
+            instructionPill
+                .padding(.bottom, 8)
+            coachingSlot
+                .padding(.bottom, 6)
             BoardView(board: flow.board, look: settings.look)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             unlockStrip
@@ -52,15 +56,34 @@ struct TutorialView: View {
         .padding(.top, 10)
         .padding(.bottom, 10)
         .background(palette.appBg.ignoresSafeArea())
+        .onChange(of: flow.index) { _, _ in
+            showUnlock = false
+            errorMessage = nil
+            stuckHint = nil
+        }
+        .onChange(of: flow.board.tapTick) { _, _ in
+            stuckHint = nil
+            evaluateClues()
+        }
         .onChange(of: flow.board.isSolved) { _, solved in
             if solved {
+                stuckHint = nil
+                errorMessage = nil
                 Task {
                     try? await Task.sleep(for: .milliseconds(600))
                     withAnimation(.easeInOut(duration: 0.3)) { showUnlock = true }
                 }
             }
         }
+        .task(id: "\(flow.index)-\(flow.board.tapTick)") {
+            try? await Task.sleep(for: .seconds(45))
+            if !Task.isCancelled, !flow.board.isSolved {
+                stuckHint = flow.lesson.stuckHint
+            }
+        }
     }
+
+    // MARK: Top bar (Skip only — no page counter)
 
     private var topBar: some View {
         HStack {
@@ -78,37 +101,89 @@ struct TutorialView: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            Text("\(flow.index + 1) / \(PuzzleData.lessons.count)")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .tracking(1.3)
-                .foregroundStyle(palette.sub)
-            Spacer()
-            // Spacer to balance the Skip button.
-            Color.clear.frame(width: 60, height: 38)
         }
     }
 
-    private var banner: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(flow.lesson.eyebrow.uppercased())
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .tracking(1.3)
-                .foregroundStyle(palette.sub)
-            Text(flow.lesson.title)
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(palette.text)
-            Text(flow.lesson.instruction)
-                .font(.system(size: 14, design: .rounded))
-                .foregroundStyle(palette.sub)
+    // MARK: Instruction pill
+
+    private var instructionPill: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(flow.lesson.title)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(palette.text)
+                Text(flow.lesson.instruction)
+                    .font(.system(size: 13, design: .rounded))
+                    .foregroundStyle(palette.sub)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(palette.pill)
         )
     }
+
+    // MARK: Coaching slot (fixed height, opacity-toggled so layout never jumps)
+
+    private var coachingSlot: some View {
+        let msg = errorMessage ?? stuckHint
+        let isError = errorMessage != nil
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: isError ? "exclamationmark.circle.fill" : "lightbulb.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isError ? palette.warn : palette.accent)
+            Text(msg ?? " ")
+                .font(.system(size: 13, design: .rounded))
+                .foregroundStyle(palette.text)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: coachingHeight)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(msg == nil ? Color.clear : palette.tierSelBg)
+        )
+        .opacity(msg == nil ? 0 : 1)
+        .animation(.easeInOut(duration: 0.2), value: errorMessage)
+        .animation(.easeInOut(duration: 0.2), value: stuckHint)
+    }
+
+    // MARK: Over-fill detection
+
+    private func evaluateClues() {
+        let model = flow.board.model
+        let p = model.puzzle
+        for r in 0..<p.rows {
+            for c in 0..<p.cols {
+                let cell = Cell(c: c, r: r)
+                guard let target = model.clues[cell],
+                      !p.hideClues.contains(cell) else { continue }
+                let count = model.count(cell: cell, in: flow.board.activeEdges)
+                if count > target {
+                    let msg = target == 0
+                        ? "That cell wants no thread — switch to Mark dead and X out its edges."
+                        : "That cell only takes \(target) thread\(target == 1 ? "" : "s")."
+                    errorMessage = msg
+                    Task {
+                        try? await Task.sleep(for: .seconds(3))
+                        if errorMessage == msg { errorMessage = nil }
+                    }
+                    return
+                }
+            }
+        }
+        errorMessage = nil
+    }
+
+    // MARK: Unlock strip (post-solve)
 
     @ViewBuilder
     private var unlockStrip: some View {

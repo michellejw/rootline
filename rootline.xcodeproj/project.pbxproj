@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D41761262FE236A5002D0B8A /* ShroomKit in Frameworks */ = {isa = PBXBuildFile; productRef = D41761252FE236A5002D0B8A /* ShroomKit */; };
 		D440846A2FE195B50016444C /* ShroomKit in Frameworks */ = {isa = PBXBuildFile; productRef = D44084692FE195B50016444C /* ShroomKit */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D440846A2FE195B50016444C /* ShroomKit in Frameworks */,
+				D41761262FE236A5002D0B8A /* ShroomKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = rootline;
 			packageProductDependencies = (
 				D44084692FE195B50016444C /* ShroomKit */,
+				D41761252FE236A5002D0B8A /* ShroomKit */,
 			);
 			productName = rootline;
 			productReference = D454E6262FE0FB0200048F33 /* rootline.app */;
@@ -114,7 +117,7 @@
 			mainGroup = D454E61D2FE0FB0200048F33;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D44084682FE195B50016444C /* XCLocalSwiftPackageReference "../../../../games/shroomkit" */,
+				D41761242FE236A5002D0B8A /* XCLocalSwiftPackageReference "../../../../games/shroomkit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D454E6272FE0FB0200048F33 /* Products */;
@@ -356,13 +359,17 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		D44084682FE195B50016444C /* XCLocalSwiftPackageReference "../../../../games/shroomkit" */ = {
+		D41761242FE236A5002D0B8A /* XCLocalSwiftPackageReference "../../../../games/shroomkit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../../../games/shroomkit;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		D41761252FE236A5002D0B8A /* ShroomKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ShroomKit;
+		};
 		D44084692FE195B50016444C /* ShroomKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ShroomKit;
