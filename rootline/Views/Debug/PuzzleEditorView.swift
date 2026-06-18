@@ -29,6 +29,13 @@ struct PuzzleEditorView: View {
         }
     }
 
+    private enum DragAction { case adding, removing }
+
+    @State private var dragAction: DragAction? = nil
+    @State private var dragVisited: Set<Cell> = []
+
+    private static let editorSpace = "rootline.editor.grid"
+
     private var puzzle: Puzzle {
         Puzzle(
             cols: cols,
@@ -43,6 +50,7 @@ struct PuzzleEditorView: View {
     var body: some View {
         VStack(spacing: 12) {
             header
+            tierShortcuts
             sizeControls
             grid
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -56,15 +64,51 @@ struct PuzzleEditorView: View {
         .background(palette.appBg.ignoresSafeArea())
     }
 
+    // MARK: Tier shortcuts
+
+    private var tierShortcuts: some View {
+        HStack(spacing: 6) {
+            ForEach(Tier.allCases) { tier in
+                Button {
+                    cols = tier.cols
+                    rows = tier.rows
+                    inside.removeAll()
+                    hide.removeAll()
+                } label: {
+                    VStack(spacing: 2) {
+                        Text(tier.label)
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundStyle(palette.text)
+                        Text(tier.shortMeta)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(palette.sub)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(palette.tierBg)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(palette.tierBorder, lineWidth: 1)
+                            )
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
     // MARK: Header
 
     private var header: some View {
         HStack(spacing: 12) {
             Button(action: onClose) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
                     .foregroundStyle(palette.sub)
-                    .frame(width: 38, height: 38)
+                    .frame(minWidth: 44, minHeight: 44)
                     .background(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(palette.pill)
@@ -74,20 +118,20 @@ struct PuzzleEditorView: View {
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 1) {
                 Text("DEBUG")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.system(.caption2, design: .rounded).weight(.semibold))
                     .tracking(1.3)
                     .foregroundStyle(palette.sub)
                 Text("Puzzle editor")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
                     .foregroundStyle(palette.text)
             }
             Spacer()
             Button(action: clearAll) {
                 Text("Clear")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(.footnote, design: .rounded).weight(.semibold))
                     .foregroundStyle(palette.sub)
                     .padding(.horizontal, 14)
-                    .frame(height: 38)
+                    .frame(minHeight: 44)
                     .background(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(palette.pill)
@@ -118,13 +162,13 @@ struct PuzzleEditorView: View {
     private func stepper(label: String, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
         HStack(spacing: 8) {
             Text(label)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(.caption, design: .rounded).weight(.semibold))
                 .tracking(1.0)
                 .foregroundStyle(palette.sub)
             Stepper("\(value.wrappedValue)", value: value, in: range)
                 .labelsHidden()
             Text("\(value.wrappedValue)")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .foregroundStyle(palette.text)
                 .monospacedDigit()
                 .frame(minWidth: 18, alignment: .leading)
@@ -153,6 +197,18 @@ struct PuzzleEditorView: View {
                 cluesLayer(cell: cell)
             }
             .frame(width: totalW, height: totalH)
+            .contentShape(Rectangle())
+            .coordinateSpace(name: Self.editorSpace)
+            .gesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.editorSpace))
+                    .onChanged { value in
+                        applyDrag(at: value.location, cellSize: cell)
+                    }
+                    .onEnded { _ in
+                        dragAction = nil
+                        dragVisited.removeAll()
+                    }
+            )
             .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
         }
     }
@@ -162,35 +218,55 @@ struct PuzzleEditorView: View {
             ForEach(0..<rows, id: \.self) { r in
                 HStack(spacing: 0) {
                     ForEach(0..<cols, id: \.self) { c in
-                        cellTile(at: Cell(c: c, r: r), size: cell)
+                        cellVisual(at: Cell(c: c, r: r), size: cell)
                     }
                 }
             }
         }
+        .allowsHitTesting(false)
     }
 
-    private func cellTile(at cell: Cell, size: CGFloat) -> some View {
+    private func cellVisual(at cell: Cell, size: CGFloat) -> some View {
         let isInside = inside.contains(cell)
         let isHidden = hide.contains(cell)
-        return Button {
-            handleTap(cell)
-        } label: {
-            ZStack {
+        return ZStack {
+            Rectangle()
+                .fill(isInside ? palette.tierSelBg : palette.boardBg)
+            Rectangle()
+                .strokeBorder(palette.tierBorder.opacity(0.4), lineWidth: 0.5)
+            if mode == .hide && isHidden {
                 Rectangle()
-                    .fill(isInside ? palette.tierSelBg : palette.boardBg)
-                Rectangle()
-                    .strokeBorder(palette.tierBorder.opacity(0.4), lineWidth: 0.5)
-                if mode == .hide && isHidden {
-                    Rectangle()
-                        .stroke(palette.sub.opacity(0.6),
-                                style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                        .padding(4)
-                }
+                    .stroke(palette.sub.opacity(0.6),
+                            style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                    .padding(4)
             }
-            .frame(width: size, height: size)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .frame(width: size, height: size)
+    }
+
+    /// Map a drag point to a cell and paint the drag's chosen direction
+    /// (adding or removing) into it, once per drag.
+    private func applyDrag(at point: CGPoint, cellSize: CGFloat) {
+        guard cellSize > 0 else { return }
+        let c = Int(point.x / cellSize)
+        let r = Int(point.y / cellSize)
+        guard c >= 0, c < cols, r >= 0, r < rows else { return }
+        let cell = Cell(c: c, r: r)
+        guard !dragVisited.contains(cell) else { return }
+        dragVisited.insert(cell)
+
+        let currentSet = mode == .inside ? inside : hide
+        if dragAction == nil {
+            dragAction = currentSet.contains(cell) ? .removing : .adding
+        }
+        let adding = dragAction == .adding
+
+        switch mode {
+        case .inside:
+            if adding { inside.insert(cell) } else { inside.remove(cell) }
+        case .hide:
+            if adding { hide.insert(cell) } else { hide.remove(cell) }
+        }
     }
 
     private func cluesLayer(cell: CGFloat) -> some View {
@@ -277,7 +353,7 @@ struct PuzzleEditorView: View {
             Text(valid
                  ? "Simply-connected · \(count) inside · \(model.solution.count) loop edges"
                  : "Enclosed hole detected — shape is not simply connected")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(.caption, design: .rounded).weight(.medium))
                 .foregroundStyle(palette.sub)
             Spacer(minLength: 0)
         }
@@ -296,9 +372,10 @@ struct PuzzleEditorView: View {
             ForEach(EditorMode.allCases) { m in
                 Button { mode = m } label: {
                     Text(m.label)
-                        .font(.system(size: 13.5, weight: .semibold, design: .rounded))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .frame(minHeight: 44)
+                        .padding(.vertical, 4)
                         .foregroundStyle(mode == m ? palette.accentText : palette.sub)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -319,36 +396,41 @@ struct PuzzleEditorView: View {
     // MARK: Actions
 
     private var actions: some View {
-        Button(action: copyToClipboard) {
-            HStack {
-                Image(systemName: flashCopied ? "checkmark" : "doc.on.clipboard")
-                    .font(.system(size: 14, weight: .semibold))
-                Text(flashCopied ? "Copied!" : "Copy Swift")
-                    .font(.system(.body, design: .rounded).weight(.semibold))
+        HStack(spacing: 10) {
+            Button(action: copyToClipboard) {
+                HStack {
+                    Image(systemName: flashCopied ? "checkmark" : "doc.on.clipboard")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    Text(flashCopied ? "Copied!" : "Copy Swift")
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                }
+                .foregroundStyle(palette.accentText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(palette.accent)
+                )
+                .contentShape(Rectangle())
             }
-            .foregroundStyle(palette.accentText)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(palette.accent)
-            )
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .animation(.easeInOut(duration: 0.2), value: flashCopied)
+
+            ShareLink(item: swiftSource()) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .foregroundStyle(palette.text)
+                    .frame(minWidth: 50, minHeight: 48)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(palette.pill)
+                    )
+                    .contentShape(Rectangle())
+            }
         }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: flashCopied)
     }
 
     // MARK: Behaviour
-
-    private func handleTap(_ cell: Cell) {
-        switch mode {
-        case .inside:
-            if inside.contains(cell) { inside.remove(cell) } else { inside.insert(cell) }
-        case .hide:
-            if hide.contains(cell) { hide.remove(cell) } else { hide.insert(cell) }
-        }
-    }
 
     private func clearAll() {
         inside.removeAll()
@@ -361,7 +443,12 @@ struct PuzzleEditorView: View {
     }
 
     private func copyToClipboard() {
-        UIPasteboard.general.string = swiftSource()
+        let src = swiftSource()
+        UIPasteboard.general.string = src
+        // Also dump to the Xcode console when tethered — handy when you're
+        // authoring on the phone and the console window is open on your Mac.
+        print("// Rootline puzzle —")
+        print(src)
         flashCopied = true
         Task {
             try? await Task.sleep(for: .milliseconds(1200))
