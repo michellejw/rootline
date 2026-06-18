@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		D41761262FE236A5002D0B8A /* ShroomKit in Frameworks */ = {isa = PBXBuildFile; productRef = D41761252FE236A5002D0B8A /* ShroomKit */; };
+		D41761342FE41E3A002D0B8A /* ShroomKit in Frameworks */ = {isa = PBXBuildFile; productRef = D41761332FE41E3A002D0B8A /* ShroomKit */; };
 		D440846A2FE195B50016444C /* ShroomKit in Frameworks */ = {isa = PBXBuildFile; productRef = D44084692FE195B50016444C /* ShroomKit */; };
+		D48F8BD92FE41F8800F5BF13 /* ShroomKit in Frameworks */ = {isa = PBXBuildFile; productRef = D48F8BD82FE41F8800F5BF13 /* ShroomKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,7 +44,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				D440846A2FE195B50016444C /* ShroomKit in Frameworks */,
+				D48F8BD92FE41F8800F5BF13 /* ShroomKit in Frameworks */,
 				D41761262FE236A5002D0B8A /* ShroomKit in Frameworks */,
+				D41761342FE41E3A002D0B8A /* ShroomKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,6 +91,8 @@
 			packageProductDependencies = (
 				D44084692FE195B50016444C /* ShroomKit */,
 				D41761252FE236A5002D0B8A /* ShroomKit */,
+				D41761332FE41E3A002D0B8A /* ShroomKit */,
+				D48F8BD82FE41F8800F5BF13 /* ShroomKit */,
 			);
 			productName = rootline;
 			productReference = D454E6262FE0FB0200048F33 /* rootline.app */;
@@ -117,7 +123,7 @@
 			mainGroup = D454E61D2FE0FB0200048F33;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D41761242FE236A5002D0B8A /* XCLocalSwiftPackageReference "../../../../games/shroomkit" */,
+				D48F8BD72FE41F8800F5BF13 /* XCLocalSwiftPackageReference "../shroomkit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D454E6272FE0FB0200048F33 /* Products */;
@@ -369,9 +375,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		D41761242FE236A5002D0B8A /* XCLocalSwiftPackageReference "../../../../games/shroomkit" */ = {
+		D48F8BD72FE41F8800F5BF13 /* XCLocalSwiftPackageReference "../shroomkit" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../../games/shroomkit;
+			relativePath = ../shroomkit;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -380,7 +386,15 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ShroomKit;
 		};
+		D41761332FE41E3A002D0B8A /* ShroomKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ShroomKit;
+		};
 		D44084692FE195B50016444C /* ShroomKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ShroomKit;
+		};
+		D48F8BD82FE41F8800F5BF13 /* ShroomKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ShroomKit;
 		};
