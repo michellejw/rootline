@@ -8,7 +8,7 @@ enum Screen {
     case difficulty
     case play
     case tutorial
-    case bestTimes
+    case stats
 #if DEBUG
     case puzzleEditor
 #endif
@@ -99,8 +99,8 @@ final class AppState {
         screen = .difficulty
     }
 
-    func openBestTimes() {
-        screen = .bestTimes
+    func openStats() {
+        screen = .stats
     }
 
     func startTutorial() {
@@ -185,7 +185,7 @@ struct RootView: View {
                 tier: appState.settings.tier,
                 onPickDifficulty: { appState.openDifficulty() },
                 onPlay: { appState.startGame(tier: appState.settings.tier) },
-                onBestTimes: { appState.openBestTimes() },
+                onStats: { appState.openStats() },
                 onHowToPlay: { appState.startTutorial() },
                 onSettings: { showSettings = true }
             )
@@ -224,8 +224,8 @@ struct RootView: View {
                 )
                 .transition(.opacity)
             }
-        case .bestTimes:
-            BestTimesView(
+        case .stats:
+            StatsView(
                 scoreStore: appState.scoreStore,
                 onClose: { appState.goHome() }
             )

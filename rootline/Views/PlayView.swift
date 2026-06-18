@@ -14,12 +14,7 @@ struct PlayView: View {
     @Environment(\.palette) private var palette
     @Environment(\.scenePhase) private var scenePhase
 
-    @State private var initials: String = ""
-    @State private var showingWinEntry: Bool = false
-    @State private var isNewRecord: Bool = false
-    /// Suppress the WinCard while an entry sheet is pending or visible so the
-    /// player doesn't see Menu/Next flash briefly before the sheet rises.
-    @State private var awaitingEntry: Bool = false
+    @State private var fastestYet: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,15 +39,14 @@ struct PlayView: View {
         .padding(.bottom, 4)
         .background(palette.appBg.ignoresSafeArea())
         .overlay(alignment: .bottom) {
-            if board.isSolved && !awaitingEntry {
-                WinCard(board: board, onNext: onNext, onMenu: onMenu)
+            if board.isSolved {
+                WinCard(board: board, fastestYet: fastestYet, onNext: onNext, onMenu: onMenu)
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.85), value: board.isSolved)
-        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: awaitingEntry)
         .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: board.tapTick)
         .sensoryFeedback(.success, trigger: board.solveTick)
         .task(id: ObjectIdentifier(board)) {
@@ -68,48 +62,15 @@ struct PlayView: View {
             // change from a non-zero value to 0. Only react to real solves.
             guard board.isSolved else { return }
             onClearProgress()
-            if let tier = board.tier,
-               scoreStore.qualifies(seconds: board.elapsedSeconds, for: tier) {
-                isNewRecord = scoreStore.isNewRecord(seconds: board.elapsedSeconds, for: tier)
-                initials = ""
-                awaitingEntry = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(900))
-                    showingWinEntry = true
-                }
+            if let tier = board.tier {
+                fastestYet = scoreStore.record(seconds: board.elapsedSeconds, for: tier) == .newBest
+            } else {
+                fastestYet = false
             }
-        }
-        .onChange(of: showingWinEntry) { _, isShowing in
-            // Releases the WinCard once the entry sheet has been dismissed by
-            // any path (Save, Skip, swipe-down).
-            if !isShowing { awaitingEntry = false }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background || phase == .inactive {
                 onSave()
-            }
-        }
-        .sheet(isPresented: $showingWinEntry) {
-            if let tier = board.tier {
-                WinEntrySheet(
-                    timeText: board.elapsedSeconds.asTimerString,
-                    tierLabel: tier.label,
-                    groveNumber: board.groveNumber,
-                    isRecord: isNewRecord,
-                    initials: $initials,
-                    onSave: {
-                        scoreStore.save(
-                            initials: initials,
-                            seconds: board.elapsedSeconds,
-                            tier: tier,
-                            groveNumber: board.groveNumber
-                        )
-                        showingWinEntry = false
-                    },
-                    onSkip: { showingWinEntry = false }
-                )
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
             }
         }
     }

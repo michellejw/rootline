@@ -3,6 +3,8 @@ import ShroomKit
 
 struct WinCard: View {
     let board: Board
+    /// True when this clear beat a pre-existing best time for the tier.
+    let fastestYet: Bool
     let onNext: () -> Void
     let onMenu: () -> Void
 
@@ -26,6 +28,11 @@ struct WinCard: View {
                     Text(subtitle)
                         .font(.system(.footnote, design: .rounded))
                         .foregroundStyle(palette.sub)
+                    if fastestYet {
+                        Text("Your fastest yet")
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(palette.accent)
+                    }
                 }
                 Spacer(minLength: 0)
             }
@@ -72,6 +79,8 @@ struct WinCard: View {
         )
     }
 
+    /// Always shows the completion time — a clock, not competition. The
+    /// "Your fastest yet" whisper above is the only achievement signal.
     private var subtitle: String {
         let tierLabel = board.tier?.label ?? "Lesson"
         let size = "\(board.puzzle.cols)×\(board.puzzle.rows)"

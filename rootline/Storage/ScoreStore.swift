@@ -1,104 +1,109 @@
 import Foundation
 
-struct ScoreEntry: Codable, Hashable, Identifiable, Sendable {
-    var id: UUID = UUID()
-    let initials: String
-    let tier: Tier
-    let groveNumber: Int
-    let seconds: Int
-    let date: Date
+/// Quiet per-tier stats: the player's fastest clear and how many they've cleared.
+struct TierStat: Codable, Equatable, Sendable {
+    var bestSeconds: Int? = nil
+    var clearedCount: Int = 0
+}
+
+/// Result of recording a cleared puzzle, used to decide the win-card whisper.
+enum ClearOutcome: Equatable, Sendable {
+    case firstClear      // first clear of this tier; no prior best existed
+    case newBest         // beat the previous best time
+    case noImprovement   // cleared, but not faster than the existing best
 }
 
 @MainActor
 @Observable
 final class ScoreStore {
-    private static let key = "rootline_scores_v1"
-    private static let maxPerTier = 5
+    private static let key = "rootline_stats_v1"
+    private let defaults: UserDefaults
 
-    private(set) var scores: [Tier: [ScoreEntry]] = Tier.allCases.reduce(into: [:]) { $0[$1] = [] }
+    private(set) var stats: [Tier: TierStat] = Tier.allCases.reduce(into: [:]) { $0[$1] = TierStat() }
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         load()
     }
 
-    func best(for tier: Tier) -> [ScoreEntry] {
-        scores[tier] ?? []
+    func stat(for tier: Tier) -> TierStat {
+        stats[tier] ?? TierStat()
     }
 
-    /// True if the given time would land in the top N for that tier.
-    func qualifies(seconds: Int, for tier: Tier) -> Bool {
-        let list = best(for: tier)
-        if list.count < Self.maxPerTier { return true }
-        guard let slowest = list.last else { return true }
-        return seconds < slowest.seconds
+    func bestSeconds(for tier: Tier) -> Int? {
+        stat(for: tier).bestSeconds
     }
 
-    /// True if the given time is better than the current best for the tier.
-    func isNewRecord(seconds: Int, for tier: Tier) -> Bool {
-        guard let fastest = best(for: tier).first else { return true }
-        return seconds < fastest.seconds
+    func clearedCount(for tier: Tier) -> Int {
+        stat(for: tier).clearedCount
     }
 
+    /// True when the player has cleared at least one puzzle in any tier.
+    var hasAnyStats: Bool {
+        stats.values.contains { $0.clearedCount > 0 }
+    }
+
+    /// Total puzzles cleared across every tier.
+    var totalCleared: Int {
+        stats.values.reduce(0) { $0 + $1.clearedCount }
+    }
+
+    /// Record a cleared puzzle: bump the completion count, lower the best time
+    /// if this was faster, and report what happened so callers can decide
+    /// whether to whisper "your fastest yet".
     @discardableResult
-    func save(initials: String, seconds: Int, tier: Tier, groveNumber: Int) -> ScoreEntry {
-        let cleaned = Self.sanitize(initials)
-        let entry = ScoreEntry(
-            initials: cleaned,
-            tier: tier,
-            groveNumber: groveNumber,
-            seconds: seconds,
-            date: Date()
-        )
-        var list = best(for: tier)
-        list.append(entry)
-        list.sort { $0.seconds < $1.seconds }
-        if list.count > Self.maxPerTier {
-            list = Array(list.prefix(Self.maxPerTier))
+    func record(seconds: Int, for tier: Tier) -> ClearOutcome {
+        var s = stat(for: tier)
+        s.clearedCount += 1
+        let outcome: ClearOutcome
+        if let best = s.bestSeconds {
+            if seconds < best {
+                s.bestSeconds = seconds
+                outcome = .newBest
+            } else {
+                outcome = .noImprovement
+            }
+        } else {
+            s.bestSeconds = seconds
+            outcome = .firstClear
         }
-        scores[tier] = list
+        stats[tier] = s
         persist()
-        return entry
+        return outcome
     }
 
     func clearAll() {
-        for tier in Tier.allCases { scores[tier] = [] }
+        for tier in Tier.allCases { stats[tier] = TierStat() }
         persist()
-    }
-
-    static func sanitize(_ raw: String) -> String {
-        let upper = raw.uppercased().unicodeScalars.filter { CharacterSet.uppercaseLetters.contains($0) }
-        let str = String(String.UnicodeScalarView(upper))
-        if str.isEmpty { return "YOU" }
-        return String(str.prefix(3))
     }
 
     // MARK: - Persistence
 
     private struct Stored: Codable {
-        var sprout: [ScoreEntry] = []
-        var mycelium: [ScoreEntry] = []
-        var ancient: [ScoreEntry] = []
-        var oldGrowth: [ScoreEntry] = []
+        var sprout: TierStat = TierStat()
+        var mycelium: TierStat = TierStat()
+        var ancient: TierStat = TierStat()
+        var oldGrowth: TierStat = TierStat()
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: Self.key),
+        guard let data = defaults.data(forKey: Self.key),
               let stored = try? JSONDecoder().decode(Stored.self, from: data) else { return }
-        scores[.sprout]    = stored.sprout
-        scores[.mycelium]  = stored.mycelium
-        scores[.ancient]   = stored.ancient
-        scores[.oldGrowth] = stored.oldGrowth
+        stats[.sprout]    = stored.sprout
+        stats[.mycelium]  = stored.mycelium
+        stats[.ancient]   = stored.ancient
+        stats[.oldGrowth] = stored.oldGrowth
     }
 
     private func persist() {
         let stored = Stored(
-            sprout:    scores[.sprout]    ?? [],
-            mycelium:  scores[.mycelium]  ?? [],
-            ancient:   scores[.ancient]   ?? [],
-            oldGrowth: scores[.oldGrowth] ?? []
+            sprout:    stat(for: .sprout),
+            mycelium:  stat(for: .mycelium),
+            ancient:   stat(for: .ancient),
+            oldGrowth: stat(for: .oldGrowth)
         )
         if let data = try? JSONEncoder().encode(stored) {
-            UserDefaults.standard.set(data, forKey: Self.key)
+            defaults.set(data, forKey: Self.key)
         }
     }
 }

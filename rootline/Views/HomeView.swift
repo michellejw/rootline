@@ -5,7 +5,7 @@ struct HomeView: View {
     let tier: Tier
     let onPickDifficulty: () -> Void
     let onPlay: () -> Void
-    let onBestTimes: () -> Void
+    let onStats: () -> Void
     let onHowToPlay: () -> Void
     let onSettings: () -> Void
 
@@ -48,7 +48,7 @@ struct HomeView: View {
                 difficultyCard
                 primaryButton("Play", action: onPlay)
                 HStack(spacing: 6) {
-                    textButton(icon: "trophy.fill", title: "Best times", action: onBestTimes)
+                    textButton(icon: "chart.bar.fill", title: "Stats", action: onStats)
                     textButton(icon: "questionmark.circle", title: "How to play", action: onHowToPlay)
                 }
             }
