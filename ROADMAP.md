@@ -78,6 +78,33 @@ All three apps build clean, public on GitHub, MIT-licensed.
 - **Shroomsweeper** ([github.com/michellejw/shroomsweeper](https://github.com/michellejw/shroomsweeper)) — on ShroomKit, persistence, ThemeMode, in-game theme cycle.
 - **ShroomKit** ([github.com/michellejw/shroomkit](https://github.com/michellejw/shroomkit)) — Palette, Appearance, ThemeMode, LoadingView, WelcomeScaffold. Two consumers. Local-path package dependency (URL-based was attempted but Xcode's SPM resolver was flaky — punted).
 
+## Repo housekeeping
+
+The Shroom Games repos are scattered awkwardly across the filesystem and the locations are misleading. Cleaning this up is overdue.
+
+**Current state:**
+- `~/dev/archive/APPS/puzzle-game/rootline/` — active, but lives under "archive"
+- `~/dev/archive/APPS/puzzle-game/shroomsweeper/` — active, but lives under "archive"
+- `~/dev/games/shroomkit/` — already in a sane place
+
+**Target state (proposed, decide when starting):**
+```
+~/dev/games/
+    rootline/
+    shroomsweeper/
+    shroomkit/
+    shroomgames-site/    # currently ~/dev/sites/shroomsweeper-site/
+```
+All four together under `~/dev/games/`, no misleading "archive" path.
+
+**Things to handle in the move:**
+- Update each app project's local Swift Package reference path (currently `../../../../games/shroomkit` from the buried location; would become just `../shroomkit` after the move)
+- Update any hardcoded paths in scripts (e.g., `scripts/add-puzzle.swift` only uses repo-relative paths, so probably fine)
+- Update CLAUDE.md "Active Projects" listings (machine-local context file)
+- Verify Xcode opens cleanly after the move (it remembers absolute paths in some cases)
+
+Not urgent but worth doing before more apps land — every new app added to the current scattered layout makes this more painful.
+
 ## What's not on the roadmap (intentionally)
 
 - **Sharing solutions** — not interested
