@@ -145,7 +145,7 @@ struct PlayView: View {
         HStack(spacing: 10) {
             Spacer()
             if settings.showTimer {
-                statPill(systemName: "clock", text: board.elapsedSeconds.asTimerString)
+                StatPill(board.elapsedSeconds.asTimerString, systemName: "clock")
             }
             if board.allowHints && board.hintsUsed > 0 {
                 hintsPill
@@ -154,23 +154,6 @@ struct PlayView: View {
         }
     }
 
-    private func statPill(systemName: String, text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemName)
-                .font(.system(.caption, design: .rounded).weight(.semibold))
-                .foregroundStyle(palette.sub)
-            Text(text)
-                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                .foregroundStyle(palette.text)
-                .monospacedDigit()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(palette.pill)
-        )
-    }
 
     private var hintsPill: some View {
         HStack(spacing: 6) {
