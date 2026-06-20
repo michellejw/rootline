@@ -17,9 +17,12 @@ final class PropagationTests: XCTestCase {
         XCTAssertTrue(state.allSatisfy { $0 == off })
     }
 
-    func test_clue3_on1x1_isContradiction() {
-        var s = Solver(grid: EdgeGrid(PuzzleClues(cols: 1, rows: 1, clues: [Cell(c: 0, r: 0): 3])))
+    func test_clue4_withOneEdgeOff_isContradiction() {
+        // A 1x1 cell needs all 4 edges on, but one is already off → clue 4 is
+        // unreachable, so propagation must report a contradiction immediately.
+        var s = Solver(grid: EdgeGrid(PuzzleClues(cols: 1, rows: 1, clues: [Cell(c: 0, r: 0): 4])))
         var state = [Int8](repeating: unknown, count: s.grid.edgeCount)
+        state[0] = off
         XCTAssertFalse(s.propagate(&state))
     }
 }
