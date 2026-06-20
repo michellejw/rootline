@@ -30,41 +30,8 @@ struct DifficultyView: View {
     }
 
     private func tierRow(_ tier: Tier) -> some View {
-        let isSelected = tier == selected
-        return Button { onPick(tier) } label: {
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(tier.label)
-                        .font(.system(.callout, design: .rounded).weight(.semibold))
-                        .foregroundStyle(palette.text)
-                    Text(tier.meta)
-                        .font(.system(.footnote, design: .rounded))
-                        .foregroundStyle(palette.sub)
-                }
-                Spacer()
-                ZStack {
-                    Circle()
-                        .stroke(isSelected ? palette.accent : palette.tierBorder, lineWidth: 2)
-                        .frame(width: 22, height: 22)
-                    if isSelected {
-                        Circle()
-                            .fill(palette.accent)
-                            .frame(width: 12, height: 12)
-                    }
-                }
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 15)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? palette.tierSelBg : palette.tierBg)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(isSelected ? palette.accent : palette.tierBorder, lineWidth: 2)
-            )
-            .contentShape(Rectangle())
+        SelectionCard(title: tier.label, subtitle: tier.meta, isSelected: tier == selected) {
+            onPick(tier)
         }
-        .buttonStyle(.plain)
     }
 }
