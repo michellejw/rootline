@@ -1,6 +1,6 @@
 import Foundation
 
-/// A Slitherlink puzzle definition: a `cols × rows` grid plus a simply-connected
+/// A Mycogrid puzzle definition: a `cols × rows` grid plus a simply-connected
 /// region of "inside" cells. The solution loop and clues are derived from the region.
 struct Puzzle: Hashable, Codable, Sendable {
     let cols: Int
@@ -21,9 +21,10 @@ struct Puzzle: Hashable, Codable, Sendable {
     }
 }
 
-struct Cell: Hashable, Codable, Sendable {
-    let c: Int
-    let r: Int
+public struct Cell: Hashable, Codable, Sendable {
+    public let c: Int
+    public let r: Int
+    public init(c: Int, r: Int) { self.c = c; self.r = r }
 
     static func from(pair: [Int]) -> Cell? {
         guard pair.count == 2 else { return nil }
