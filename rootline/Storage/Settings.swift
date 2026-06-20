@@ -57,10 +57,7 @@ final class Settings {
 
     /// Cycle System → Light → Dark → System. Used by the in-game quick-toggle.
     func cycleThemeMode() {
-        switch themeMode {
-        case .system:   themeMode = .forest
-        case .forest:   themeMode = .twilight
-        case .twilight: themeMode = .system
-        }
+        // Quick toggle: a 2-state light/dark flip. "System" is chosen in Settings.
+        themeMode = (themeMode == .twilight) ? .forest : .twilight
     }
 }
