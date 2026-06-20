@@ -21,9 +21,10 @@ struct Puzzle: Hashable, Codable, Sendable {
     }
 }
 
-struct Cell: Hashable, Codable, Sendable {
-    let c: Int
-    let r: Int
+public struct Cell: Hashable, Codable, Sendable {
+    public let c: Int
+    public let r: Int
+    public init(c: Int, r: Int) { self.c = c; self.r = r }
 
     static func from(pair: [Int]) -> Cell? {
         guard pair.count == 2 else { return nil }

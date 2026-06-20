@@ -3,7 +3,7 @@ import Foundation
 /// An edge between two adjacent dots on the lattice.
 /// `h(r, c)` connects dot (c, r) → (c+1, r).
 /// `v(r, c)` connects dot (c, r) → (c, r+1).
-enum Edge: Hashable, Codable, Sendable {
+public enum Edge: Hashable, Codable, Sendable {
     case h(r: Int, c: Int)
     case v(r: Int, c: Int)
 
@@ -15,9 +15,10 @@ enum Edge: Hashable, Codable, Sendable {
     }
 }
 
-struct Dot: Hashable, Codable, Sendable {
-    let c: Int
-    let r: Int
+public struct Dot: Hashable, Codable, Sendable {
+    public let c: Int
+    public let r: Int
+    public init(c: Int, r: Int) { self.c = c; self.r = r }
 }
 
 extension Edge {
