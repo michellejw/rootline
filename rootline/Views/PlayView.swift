@@ -102,32 +102,9 @@ struct PlayView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 0) {
-            Button(action: { tappedBack() }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .foregroundStyle(palette.sub)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(palette.pill)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 6)
-            Button(action: { confirmingReveal = true }) {
-                Image(systemName: "eye")
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .foregroundStyle(revealEnabled ? palette.sub : palette.sub.opacity(0.35))
-                    .frame(minWidth: 44, minHeight: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(palette.pill)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!revealEnabled)
+            PillIconButton(systemName: "chevron.left", accessibilityLabel: "Back", action: { tappedBack() })
+                .padding(.trailing, 6)
+            PillIconButton(systemName: "eye", accessibilityLabel: "Show solution", isEnabled: revealEnabled, action: { confirmingReveal = true })
             Spacer()
             VStack(spacing: 1) {
                 EyebrowLabel(board.tier?.label ?? "Lesson")
@@ -136,32 +113,9 @@ struct PlayView: View {
                     .foregroundStyle(palette.text)
             }
             Spacer()
-            Button(action: { settings.cycleThemeMode() }) {
-                Image(systemName: themeIconName(for: settings.themeMode))
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .foregroundStyle(palette.sub)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(palette.pill)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 6)
-            Button(action: { board.nextHint() }) {
-                Image(systemName: "questionmark")
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .foregroundStyle(hintEnabled ? palette.sub : palette.sub.opacity(0.35))
-                    .frame(minWidth: 44, minHeight: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(palette.pill)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!hintEnabled)
+            PillIconButton(systemName: settings.themeMode.iconName, accessibilityLabel: "Theme", action: { settings.cycleThemeMode() })
+                .padding(.trailing, 6)
+            PillIconButton(systemName: "questionmark", accessibilityLabel: "Hint", isEnabled: hintEnabled, action: { board.nextHint() })
         }
     }
 

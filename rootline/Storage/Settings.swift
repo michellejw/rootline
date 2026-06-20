@@ -64,12 +64,3 @@ final class Settings {
         }
     }
 }
-
-/// SF Symbol name matching the current theme mode for quick-toggle buttons.
-func themeIconName(for mode: ThemeMode) -> String {
-    switch mode {
-    case .system:   return "circle.lefthalf.filled"
-    case .forest:   return "sun.max.fill"
-    case .twilight: return "moon.fill"
-    }
-}

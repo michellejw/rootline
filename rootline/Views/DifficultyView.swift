@@ -27,18 +27,7 @@ struct DifficultyView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .foregroundStyle(palette.sub)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(palette.pill)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            PillIconButton(systemName: "chevron.left", accessibilityLabel: "Back", action: onBack)
             Text("Difficulty")
                 .font(.system(.title2, design: .rounded).weight(.semibold))
                 .foregroundStyle(palette.text)

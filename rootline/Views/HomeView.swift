@@ -15,18 +15,7 @@ struct HomeView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                Button(action: onSettings) {
-                    Image(systemName: "gearshape")
-                        .font(.system(.body, design: .rounded).weight(.semibold))
-                        .foregroundStyle(palette.sub)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(palette.pill)
-                        )
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                PillIconButton(systemName: "gearshape", accessibilityLabel: "Settings", action: onSettings)
             }
             Spacer(minLength: 0)
             VStack(spacing: 14) {
