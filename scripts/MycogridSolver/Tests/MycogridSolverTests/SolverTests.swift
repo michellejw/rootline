@@ -31,4 +31,23 @@ final class SolverTests: XCTestCase {
         XCTAssertEqual(result.verdict, .unique)
         XCTAssertEqual(result.solution?.count, 6)
     }
+
+    func test_isSingleLoop_rejectsTwoDisjointLoops() {
+        // 3x1 grid: turn cell (0,0) and cell (2,0) into two separate unit loops.
+        // Their edge sets don't overlap, so the on-edges form two disjoint loops,
+        // which isSingleLoop must reject.
+        let s = Solver(grid: EdgeGrid(PuzzleClues(cols: 3, rows: 1, clues: [:])))
+        var state = [Int8](repeating: off, count: s.grid.edgeCount)
+        for e in Edge.cellEdges(c: 0, r: 0) + Edge.cellEdges(c: 2, r: 0) {
+            state[s.grid.edges.firstIndex(of: e)!] = on
+        }
+        XCTAssertFalse(s.isSingleLoop(state), "two disjoint unit loops must be rejected")
+    }
+
+    func test_isSingleLoop_acceptsOneLoop() {
+        // Positive control: a single unit loop on a 1x1 grid is a valid single loop.
+        let s = Solver(grid: EdgeGrid(PuzzleClues(cols: 1, rows: 1, clues: [:])))
+        let state = [Int8](repeating: on, count: s.grid.edgeCount)
+        XCTAssertTrue(s.isSingleLoop(state))
+    }
 }

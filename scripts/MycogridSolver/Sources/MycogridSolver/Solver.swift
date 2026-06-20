@@ -109,6 +109,13 @@ extension Solver {
         search(&st, depth: depth + 1)
     }
 
+    // KNOWN LIMIT: when a grid is sparsely clued (few visible clues), this
+    // fallback explores unconstrained edges with no subloop pruning, so the
+    // search can take a very long time (e.g. a 7x10 grid with a single clue
+    // does not finish quickly). This is fine for the curated pool (<=5 guesses
+    // per puzzle) and adequately-clued puzzles. The generator sub-project, which
+    // will feed under-clued candidates, must add subloop pruning and/or a
+    // guess/time budget before relying on solve() for arbitrary inputs.
     /// Most-constrained-variable: an unknown edge of the clued cell with the fewest unknowns.
     func chooseUnknown(_ st: [Int8]) -> Int? {
         var best: Int?
