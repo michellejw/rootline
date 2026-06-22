@@ -21,8 +21,13 @@ struct EdgeGrid {
         self.edges = edges
         self.indexOf = indexOf
 
+        // Sort by (row, col) so constraint order — and therefore the solver's
+        // rule-firing order and trace counts — is stable across processes.
+        // Swift Dictionary iteration order is per-process randomized; iterating
+        // it raw made generated bundles non-byte-reproducible.
         var cellCon: [(clue: Int, edges: [Int])] = []
-        for (cell, n) in clues.clues {
+        for cell in clues.clues.keys.sorted(by: { ($0.r, $0.c) < ($1.r, $1.c) }) {
+            let n = clues.clues[cell]!
             let es = Edge.cellEdges(c: cell.c, r: cell.r).map { indexOf[$0]! }
             cellCon.append((clue: n, edges: es))
         }
