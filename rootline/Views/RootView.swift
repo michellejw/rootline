@@ -9,6 +9,7 @@ enum Screen {
     case play
     case tutorial
     case stats
+    case archive
 #if DEBUG
     case puzzleEditor
 #endif
@@ -72,7 +73,7 @@ final class AppState {
         return completions.record(id: id, tier: tier, seconds: seconds)
     }
 
-    func openArchive() { /* wired in Task 8 */ }
+    func openArchive() { screen = .archive }
 
     /// Called once when the launch loader finishes its first beat. If a
     /// previous session was in progress, jump straight into it.
@@ -274,6 +275,15 @@ struct RootView: View {
         case .stats:
             StatsView(
                 scoreStore: appState.scoreStore,
+                onClose: { appState.goHome() }
+            )
+            .transition(.opacity)
+        case .archive:
+            ArchiveView(
+                daily: appState.daily,
+                completions: appState.completions,
+                floor: appState.settings.archiveFloor,
+                onPlay: { date in appState.startArchived(date: date) },
                 onClose: { appState.goHome() }
             )
             .transition(.opacity)
