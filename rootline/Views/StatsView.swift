@@ -2,7 +2,7 @@ import SwiftUI
 import ShroomKit
 
 struct StatsView: View {
-    @Bindable var scoreStore: ScoreStore
+    @Bindable var completions: CompletionStore
     let onClose: () -> Void
 
     @Environment(\.palette) private var palette
@@ -19,8 +19,8 @@ struct StatsView: View {
                     ForEach(Tier.allCases) { tier in
                         tierCard(tier)
                     }
-                    if scoreStore.hasAnyStats {
-                        Text("\(scoreStore.totalCleared) puzzles cleared")
+                    if completions.hasAnyStats {
+                        Text("\(completions.totalCleared) groves cleared")
                             .font(.system(.footnote, design: .rounded).weight(.medium))
                             .foregroundStyle(palette.sub)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -35,7 +35,7 @@ struct StatsView: View {
         .background(palette.appBg.ignoresSafeArea())
         .alert("Clear all stats?", isPresented: $confirmingClear) {
             Button("Cancel", role: .cancel) { }
-            Button("Clear", role: .destructive) { scoreStore.clearAll() }
+            Button("Clear", role: .destructive) { completions.clearAll() }
         } message: {
             Text("This wipes every fastest time and cleared count across all tiers. Can't be undone.")
         }
@@ -43,7 +43,7 @@ struct StatsView: View {
 
     private var header: some View {
         ScreenHeader("Stats", onBack: onClose) {
-            if scoreStore.hasAnyStats {
+            if completions.hasAnyStats {
                 Button { confirmingClear = true } label: {
                     Text("Clear")
                         .font(.system(.footnote, design: .rounded).weight(.semibold))
@@ -58,7 +58,8 @@ struct StatsView: View {
     }
 
     private func tierCard(_ tier: Tier) -> some View {
-        let stat = scoreStore.stat(for: tier)
+        let best = completions.bestSeconds(for: tier)
+        let count = completions.clearedCount(for: tier)
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 EyebrowLabel(tier.label)
@@ -67,12 +68,12 @@ struct StatsView: View {
                     .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(palette.sub)
             }
-            if let best = stat.bestSeconds {
+            if let best {
                 Text("Your fastest: \(best.asTimerString)")
                     .font(.system(.body, design: .rounded).weight(.semibold))
                     .foregroundStyle(palette.text)
                     .monospacedDigit()
-                Text("\(stat.clearedCount) cleared")
+                Text("\(count) cleared")
                     .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(palette.sub)
             } else {

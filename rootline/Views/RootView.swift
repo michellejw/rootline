@@ -282,7 +282,7 @@ struct RootView: View {
             }
         case .stats:
             StatsView(
-                scoreStore: appState.scoreStore,
+                completions: appState.completions,
                 onClose: { appState.goHome() }
             )
             .transition(.opacity)
