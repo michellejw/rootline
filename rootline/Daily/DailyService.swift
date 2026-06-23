@@ -60,4 +60,34 @@ struct DailyService: Sendable {
         calendar.date(byAdding: .day, value: -14, to: calendar.startOfDay(for: firstOpen))
             ?? calendar.startOfDay(for: firstOpen)
     }
+
+    /// Start-of-day dates from `floor` through `today` inclusive, most-recent-first.
+    func archiveDates(floor: Date, today: Date) -> [Date] {
+        let f = calendar.startOfDay(for: floor)
+        let t = calendar.startOfDay(for: today)
+        guard t >= f else { return [] }
+        let n = calendar.dateComponents([.day], from: f, to: t).day ?? 0
+        let ascending = (0...n).compactMap { calendar.date(byAdding: .day, value: $0, to: f) }
+        return ascending.reversed()
+    }
+
+    /// Current backfillable streak: consecutive cleared days ending at today, or at
+    /// yesterday when today is not cleared yet. Walks backward, stopping at the
+    /// first gap. `isCleared` is supplied by the completion store.
+    func currentStreak(today: Date, isCleared: (DailyPuzzle) -> Bool) -> Int {
+        var day = calendar.startOfDay(for: today)
+        // If today's puzzle isn't cleared, an in-progress today shouldn't break the
+        // streak — start the count from yesterday.
+        if let p = puzzle(for: day), !isCleared(p) {
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: day) else { return 0 }
+            day = yesterday
+        }
+        var streak = 0
+        while let p = puzzle(for: day), isCleared(p) {
+            streak += 1
+            guard let prev = calendar.date(byAdding: .day, value: -1, to: day) else { break }
+            day = prev
+        }
+        return streak
+    }
 }

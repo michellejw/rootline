@@ -93,3 +93,60 @@ import Foundation
         #expect(floor == Self.day(2026, 6, 8))
     }
 }
+
+@Suite struct DailyServiceArchiveTests {
+    typealias T = DailyServiceTests
+    func svc(_ n: Int = 300) -> DailyService {
+        DailyService(bundle: DailyServiceTests.bundle(perTier: n), calendar: DailyServiceTests.utc)
+    }
+
+    @Test func archiveDatesAreInclusiveAndDescending() {
+        let s = svc()
+        let dates = s.archiveDates(floor: T.day(2026, 6, 20), today: T.day(2026, 6, 22))
+        #expect(dates == [T.day(2026, 6, 22), T.day(2026, 6, 21), T.day(2026, 6, 20)])
+    }
+
+    @Test func archiveDatesEmptyWhenTodayBeforeFloor() {
+        let s = svc()
+        #expect(s.archiveDates(floor: T.day(2026, 6, 22), today: T.day(2026, 6, 20)).isEmpty)
+    }
+
+    @Test func streakCountsConsecutiveClearedEndingToday() {
+        let s = svc()
+        // Cleared: 20, 21, 22 (today). Streak = 3.
+        let cleared: Set<String> = [
+            s.puzzle(for: T.day(2026, 6, 20))!.id,
+            s.puzzle(for: T.day(2026, 6, 21))!.id,
+            s.puzzle(for: T.day(2026, 6, 22))!.id,
+        ]
+        let n = s.currentStreak(today: T.day(2026, 6, 22)) { cleared.contains($0.id) }
+        #expect(n == 3)
+    }
+
+    @Test func streakEndsYesterdayWhenTodayUnsolved() {
+        let s = svc()
+        // Cleared: 20, 21 but NOT 22. Today 22 unsolved → streak ends yesterday = 2.
+        let cleared: Set<String> = [
+            s.puzzle(for: T.day(2026, 6, 20))!.id,
+            s.puzzle(for: T.day(2026, 6, 21))!.id,
+        ]
+        let n = s.currentStreak(today: T.day(2026, 6, 22)) { cleared.contains($0.id) }
+        #expect(n == 2)
+    }
+
+    @Test func streakStopsAtAGap() {
+        let s = svc()
+        // Cleared: 22 (today) and 20, but 21 missing → streak = 1 (just today).
+        let cleared: Set<String> = [
+            s.puzzle(for: T.day(2026, 6, 22))!.id,
+            s.puzzle(for: T.day(2026, 6, 20))!.id,
+        ]
+        let n = s.currentStreak(today: T.day(2026, 6, 22)) { cleared.contains($0.id) }
+        #expect(n == 1)
+    }
+
+    @Test func streakIsZeroWhenNothingCleared() {
+        let s = svc()
+        #expect(s.currentStreak(today: T.day(2026, 6, 22)) { _ in false } == 0)
+    }
+}
