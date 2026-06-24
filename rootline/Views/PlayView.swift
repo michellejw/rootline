@@ -5,8 +5,10 @@ struct PlayView: View {
     @Bindable var board: Board
     let settings: Settings
     let playedDate: Date
+    let isReview: Bool
     let onRecordClear: (Int) -> Bool
     let onArchive: () -> Void
+    let onReplay: () -> Void
     let onMenu: () -> Void
     let onBack: () -> Void
     let onSave: () -> Void
@@ -26,7 +28,7 @@ struct PlayView: View {
             statsRow
                 .padding(.top, 14)
                 .padding(.bottom, 10)
-            BoardView(board: board, look: settings.look)
+            BoardView(board: board)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 8)
             if !board.isSolved && !board.revealed {
@@ -43,7 +45,7 @@ struct PlayView: View {
         .background(palette.appBg.ignoresSafeArea())
         .overlay(alignment: .bottom) {
             if board.isSolved {
-                WinCard(board: board, fastestYet: fastestYet, onMenu: onMenu, onArchive: onArchive)
+                WinCard(board: board, fastestYet: fastestYet, isReview: isReview, onMenu: onMenu, onArchive: onArchive, onReplay: onReplay)
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -146,9 +148,6 @@ struct PlayView: View {
     private var statsRow: some View {
         HStack(spacing: 10) {
             Spacer()
-            if settings.showTimer {
-                StatPill(board.elapsedSeconds.asTimerString, systemName: "clock")
-            }
             if board.allowHints && board.hintsUsed > 0 {
                 hintsPill
             }

@@ -4,19 +4,16 @@ import ShroomKit
 struct HomeView: View {
     let today: AppState.TodayContext?
     let onPlayToday: () -> Void
+    let onReplayToday: () -> Void
     let onArchive: () -> Void
     let onStats: () -> Void
     let onHowToPlay: () -> Void
-    let onSettings: () -> Void
 
     @Environment(\.palette) private var palette
+    @State private var confirmingReplay: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                PillIconButton(systemName: "gearshape", accessibilityLabel: "Settings", action: onSettings)
-            }
             Spacer(minLength: 0)
             VStack(spacing: 14) {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -35,9 +32,15 @@ struct HomeView: View {
             Spacer(minLength: 0)
             VStack(spacing: 11) {
                 todayCard
-                Button(today?.cleared == true ? "Play again" : "Play today", action: onPlayToday)
-                    .buttonStyle(.shroomPrimary(prominent: true))
-                    .disabled(today == nil)
+                Button(today?.cleared == true ? "Play again" : "Play today") {
+                    if today?.cleared == true {
+                        confirmingReplay = true
+                    } else {
+                        onPlayToday()
+                    }
+                }
+                .buttonStyle(.shroomPrimary(prominent: true))
+                .disabled(today == nil)
                 HStack(spacing: 6) {
                     textButton(icon: "calendar", title: "Archive", action: onArchive)
                     textButton(icon: "chart.bar.fill", title: "Stats", action: onStats)
@@ -50,6 +53,12 @@ struct HomeView: View {
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(palette.appBg.ignoresSafeArea())
+        .alert("Play again?", isPresented: $confirmingReplay) {
+            Button("Cancel", role: .cancel) { }
+            Button("Play") { onReplayToday() }
+        } message: {
+            Text("Your cleared time will be kept if you don't beat it.")
+        }
     }
 
     private var todayCard: some View {

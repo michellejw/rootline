@@ -9,7 +9,7 @@ final class TutorialFlow {
 
     init() {
         let lesson = PuzzleData.lessons[0]
-        self.board = Board(puzzle: lesson.puzzle, tier: nil, groveNumber: 1, allowHints: false)
+        self.board = Board(puzzle: lesson.puzzle, tier: nil, allowHints: false)
     }
 
     var lesson: PuzzleData.Lesson {
@@ -22,7 +22,7 @@ final class TutorialFlow {
         guard !isLast else { return }
         index += 1
         let l = PuzzleData.lessons[index]
-        board = Board(puzzle: l.puzzle, tier: nil, groveNumber: index + 1, allowHints: false)
+        board = Board(puzzle: l.puzzle, tier: nil, allowHints: false)
     }
 }
 
@@ -38,6 +38,18 @@ struct TutorialView: View {
     @State private var stuckHint: String? = nil
 
     private let coachingHeight: CGFloat = 56
+    /// Fixed-height bottom area so the board never reflows when the mode toggle
+    /// is swapped for the unlock strip on solve.
+    private let bottomSlotHeight: CGFloat = 140
+
+    /// Board's natural aspect ratio including its padding — matches
+    /// `BoardLayout`'s `cell * (cols + 1.24) / cell * (rows + 1.24)` so the
+    /// outer frame matches the inner draw bounds.
+    private var boardAspect: CGFloat {
+        let cols = CGFloat(flow.board.puzzle.cols)
+        let rows = CGFloat(flow.board.puzzle.rows)
+        return (cols + 1.24) / (rows + 1.24)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,15 +59,13 @@ struct TutorialView: View {
                 .padding(.bottom, 8)
             coachingSlot
                 .padding(.bottom, 6)
-            BoardView(board: flow.board, look: settings.look)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            if !flow.board.isSolved {
-                modeToggle
-                    .padding(.top, 14)
-                    .transition(.opacity)
-            }
-            unlockStrip
-                .padding(.top, 16)
+            Spacer(minLength: 0)
+            BoardView(board: flow.board)
+                .aspectRatio(boardAspect, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+            Spacer(minLength: 0)
+            bottomSlot
+                .padding(.top, 14)
         }
         .padding(.horizontal, 22)
         .padding(.top, 10)
@@ -150,10 +160,27 @@ struct TutorialView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: coachingHeight)
+        .frame(height: coachingHeight)
         .opacity(msg == nil ? 0 : 1)
         .animation(.easeInOut(duration: 0.2), value: errorMessage)
         .animation(.easeInOut(duration: 0.2), value: stuckHint)
+    }
+
+    // MARK: Bottom slot — fixed height; holds modeToggle OR unlockStrip via opacity
+
+    private var bottomSlot: some View {
+        ZStack(alignment: .top) {
+            modeToggle
+                .opacity(flow.board.isSolved ? 0 : 1)
+                .allowsHitTesting(!flow.board.isSolved)
+            unlockStrip
+                .opacity(showUnlock ? 1 : 0)
+                .allowsHitTesting(showUnlock)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: bottomSlotHeight, alignment: .top)
+        .animation(.easeInOut(duration: 0.25), value: showUnlock)
+        .animation(.easeInOut(duration: 0.25), value: flow.board.isSolved)
     }
 
     // MARK: Draw / Mark mode toggle (mirrors PlayView)
@@ -215,31 +242,27 @@ struct TutorialView: View {
 
     // MARK: Unlock strip (post-solve)
 
-    @ViewBuilder
     private var unlockStrip: some View {
-        if showUnlock {
-            VStack(spacing: 12) {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .font(.system(.footnote, design: .rounded).weight(.semibold))
-                        .foregroundStyle(palette.accent)
-                    Text("Unlocked: \"\(flow.lesson.unlock)\"")
-                        .font(.system(.footnote, design: .rounded))
-                        .foregroundStyle(palette.text)
-                        .multilineTextAlignment(.leading)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(palette.tierSelBg)
-                )
-                Button(flow.isLast ? "Start playing" : "Next lesson", action: advance)
-                    .buttonStyle(.shroomPrimary)
+        VStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "sparkles")
+                    .font(.system(.footnote, design: .rounded).weight(.semibold))
+                    .foregroundStyle(palette.accent)
+                Text("Unlocked: \"\(flow.lesson.unlock)\"")
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(palette.text)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
             }
-            .transition(.opacity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(palette.tierSelBg)
+            )
+            Button(flow.isLast ? "Start playing" : "Next lesson", action: advance)
+                .buttonStyle(.shroomPrimary)
         }
     }
 

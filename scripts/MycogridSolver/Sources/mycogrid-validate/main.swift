@@ -12,20 +12,10 @@ func fail(_ msg: String, code: Int32) -> Never {
 
 let args = CommandLine.arguments
 guard args.count >= 2 else {
-    fail("usage: mycogrid-validate <pool | bundle <path> | file <path>>", code: 2)
+    fail("usage: mycogrid-validate <bundle <path> | file <path>>", code: 2)
 }
 
 switch args[1] {
-case "pool":
-    let reports = auditPool()
-    print("\(pad("tier/grove", 22)) \(pad("verdict", 9)) \(pad("guesses", 8)) \(pad("match", 6)) \(pad("oracle", 7)) result")
-    var anyFail = false
-    for r in reports {
-        if !r.passed { anyFail = true }
-        print("\(pad(r.label, 22)) \(pad(r.verdict.rawValue, 9)) \(pad(String(r.guesses), 8)) \(pad(r.matchesStored ? "yes" : "no", 6)) \(pad(r.oracleOK ? "yes" : "no", 7)) \(r.passed ? "PASS" : "FAIL")")
-    }
-    exit(anyFail ? 1 : 0)
-
 case "bundle":
     guard args.count >= 3 else { fail("usage: mycogrid-validate bundle <path>", code: 2) }
     let bundle: PuzzleBundle

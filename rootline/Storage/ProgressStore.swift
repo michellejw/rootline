@@ -4,8 +4,9 @@ import Foundation
 /// UserDefaults. Restored on app launch so the player can resume after
 /// backgrounding, killing the app, or rebooting the phone.
 struct PuzzleProgress: Codable, Sendable {
+    let puzzleID: String
+    let playedDate: Date
     let tier: Tier
-    let groveNumber: Int
     let activeEdges: [Edge]
     let xEdges: [Edge]
     let mode: DrawMode
@@ -15,7 +16,7 @@ struct PuzzleProgress: Codable, Sendable {
 
 @MainActor
 final class ProgressStore {
-    private static let key = "rootline_in_progress_v1"
+    private static let key = "rootline_in_progress_v2"
 
     func load() -> PuzzleProgress? {
         guard let data = UserDefaults.standard.data(forKey: Self.key) else { return nil }

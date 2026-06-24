@@ -7,16 +7,6 @@ public struct PoolReport: Sendable {
     public var passed: Bool { verdict == .unique && matchesStored && oracleOK }
 }
 
-public func auditPool() -> [PoolReport] {
-    var out: [PoolReport] = []
-    for tier in Tier.allCases {
-        for (i, puzzle) in PuzzleData.puzzles(for: tier).enumerated() {
-            out.append(auditPuzzle(puzzle, label: "\(tier.label) #\(i + 1)"))
-        }
-    }
-    return out
-}
-
 func auditPuzzle(_ puzzle: Puzzle, label: String) -> PoolReport {
     let model = PuzzleModel(puzzle)
     // Visible clues = derived clues minus the hidden ones (what a player actually sees).

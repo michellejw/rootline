@@ -11,7 +11,6 @@ enum DrawMode: String, Codable, Sendable {
 @Observable
 final class Board {
     let model: PuzzleModel
-    let groveNumber: Int
     let tier: Tier?
     let allowHints: Bool
 
@@ -28,34 +27,25 @@ final class Board {
     var solveTick: Int = 0
     var tapTick: Int = 0
 
-    init(puzzle: Puzzle, tier: Tier?, groveNumber: Int, allowHints: Bool = true) {
+    init(puzzle: Puzzle, tier: Tier?, allowHints: Bool = true) {
         self.model = PuzzleModel(puzzle)
         self.tier = tier
-        self.groveNumber = groveNumber
         self.allowHints = allowHints
         self.activeEdges = puzzle.presetActive
         self.xEdges = []
     }
 
-    /// Build a board from a saved snapshot. Falls back to grove 0 if the saved
-    /// grove number no longer exists in the tier's puzzle list (puzzles may
-    /// have been re-ordered between launches).
-    convenience init?(restoring progress: PuzzleProgress) {
-        let puzzles = PuzzleData.puzzles(for: progress.tier)
-        guard !puzzles.isEmpty else { return nil }
-        let index = max(0, min(progress.groveNumber - 1, puzzles.count - 1))
-        self.init(
-            puzzle: puzzles[index],
-            tier: progress.tier,
-            groveNumber: index + 1,
-            allowHints: true
-        )
+    /// Build a board from a saved snapshot by re-deriving the puzzle from its
+    /// played date via `DailyService`. Returns nil if the id no longer matches
+    /// what the date maps to (bundle/regen drift).
+    convenience init?(restoring progress: PuzzleProgress, using daily: DailyService) {
+        guard let dp = daily.puzzle(for: progress.playedDate), dp.id == progress.puzzleID else { return nil }
+        self.init(puzzle: dp.puzzle, tier: dp.tier, allowHints: true)
         self.activeEdges = Set(progress.activeEdges)
         self.xEdges = Set(progress.xEdges)
         self.mode = progress.mode
         self.elapsedSeconds = progress.elapsedSeconds
         self.hintsUsed = progress.hintsUsed
-        // Re-run win detection in case the restored state already satisfies.
         if model.isSolved(active: activeEdges) {
             isSolved = true
         }
@@ -63,11 +53,12 @@ final class Board {
 
     /// A serializable snapshot of the current play session, or `nil` if this is
     /// a tutorial board (no tier).
-    func snapshot() -> PuzzleProgress? {
+    func snapshot(puzzleID: String, playedDate: Date) -> PuzzleProgress? {
         guard let tier else { return nil }
         return PuzzleProgress(
+            puzzleID: puzzleID,
+            playedDate: playedDate,
             tier: tier,
-            groveNumber: groveNumber,
             activeEdges: Array(activeEdges),
             xEdges: Array(xEdges),
             mode: mode,

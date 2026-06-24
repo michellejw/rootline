@@ -5,14 +5,10 @@ enum Screen {
     case launching
     case welcome
     case home
-    case difficulty
     case play
     case tutorial
     case stats
     case archive
-#if DEBUG
-    case puzzleEditor
-#endif
 }
 
 @MainActor
@@ -21,7 +17,6 @@ final class AppState {
     var screen: Screen = .launching
     let settings: Settings = Settings()
     let progressStore: ProgressStore = ProgressStore()
-    let scoreStore: ScoreStore = ScoreStore()
     let daily: DailyService? = DailyService.live()
     let completions: CompletionStore = CompletionStore()
 
@@ -31,8 +26,9 @@ final class AppState {
     /// The calendar date of the board currently in play (today, or an archived day).
     private(set) var playingDate: Date = Date()
     private(set) var playingPuzzleID: String?
-
-    private var currentPuzzleIndex: Int = 0
+    /// True when the active board was opened as a previously-cleared puzzle
+    /// (review mode). Drives the WinCard's secondary button.
+    private(set) var isReviewing: Bool = false
 
     struct TodayContext {
         let date: Date
@@ -51,19 +47,31 @@ final class AppState {
         )
     }
 
-    /// Start today's daily puzzle.
-    func startToday() { playDaily(date: Date()) }
+    /// Start today's daily puzzle. If already cleared, opens in review mode
+    /// (solved board + win card); use `replayCurrent()` to force a fresh attempt.
+    func startToday() { playDaily(date: Date(), forceFresh: false) }
+
+    /// Replay today's puzzle from scratch (called from the Home button).
+    func replayToday() { playDaily(date: Date(), forceFresh: true) }
 
     /// Start the puzzle for a specific calendar date (from the archive).
-    func startArchived(date: Date) { playDaily(date: date) }
+    func startArchived(date: Date) { playDaily(date: date, forceFresh: false) }
 
-    private func playDaily(date: Date) {
+    /// Replay the in-play puzzle from scratch (called from the WinCard's
+    /// "Replay" affordance in review mode).
+    func replayCurrent() { playDaily(date: playingDate, forceFresh: true) }
+
+    private func playDaily(date: Date, forceFresh: Bool) {
         guard let daily, let dp = daily.puzzle(for: date) else { return }
         playingDate = date
         playingPuzzleID = dp.id
-        let board = Board(puzzle: dp.puzzle, tier: dp.tier, groveNumber: 0)
-        if completions.isCleared(dp), let best = completions.byID[dp.id]?.bestSeconds {
+        let cleared = completions.isCleared(dp)
+        let board = Board(puzzle: dp.puzzle, tier: dp.tier)
+        if !forceFresh, cleared, let best = completions.byID[dp.id]?.bestSeconds {
             board.openAsCleared(bestSeconds: best)
+            isReviewing = true
+        } else {
+            isReviewing = false
         }
         activeBoard = board
         saveProgress()
@@ -83,11 +91,12 @@ final class AppState {
     /// previous session was in progress, jump straight into it.
     func finishLaunch() {
         if let saved = progressStore.load(),
-           let board = Board(restoring: saved),
+           let daily,
+           let board = Board(restoring: saved, using: daily),
            !board.isSolved {
             activeBoard = board
-            currentPuzzleIndex = saved.groveNumber - 1
-            settings.tier = saved.tier
+            playingDate = saved.playedDate
+            playingPuzzleID = saved.puzzleID
             screen = .play
             return
         }
@@ -103,39 +112,12 @@ final class AppState {
         screen = .home
     }
 
-    func startGame(tier: Tier) {
-        settings.tier = tier
-        currentPuzzleIndex = 0
-        let puzzles = PuzzleData.puzzles(for: tier)
-        let puzzle = puzzles[currentPuzzleIndex]
-        let board = Board(
-            puzzle: puzzle,
-            tier: tier,
-            groveNumber: currentPuzzleIndex + 1
-        )
-        activeBoard = board
-        saveProgress()
-        screen = .play
-    }
-
-    func nextPuzzle() {
-        guard let tier = activeBoard?.tier else { return }
-        let puzzles = PuzzleData.puzzles(for: tier)
-        currentPuzzleIndex = (currentPuzzleIndex + 1) % puzzles.count
-        let board = Board(
-            puzzle: puzzles[currentPuzzleIndex],
-            tier: tier,
-            groveNumber: currentPuzzleIndex + 1
-        )
-        activeBoard = board
-        saveProgress()
-    }
-
     /// Snapshot the active board to disk. Cheap; called on every tap and on
     /// scenePhase changes.
     func saveProgress() {
         guard let board = activeBoard, !board.isSolved,
-              let snapshot = board.snapshot() else { return }
+              let id = playingPuzzleID,
+              let snapshot = board.snapshot(puzzleID: id, playedDate: playingDate) else { return }
         progressStore.save(snapshot)
     }
 
@@ -147,10 +129,6 @@ final class AppState {
         screen = .home
     }
 
-    func openDifficulty() {
-        screen = .difficulty
-    }
-
     func openStats() {
         screen = .stats
     }
@@ -159,12 +137,6 @@ final class AppState {
         tutorial = TutorialFlow()
         screen = .tutorial
     }
-
-#if DEBUG
-    func openPuzzleEditor() {
-        screen = .puzzleEditor
-    }
-#endif
 
     func finishTutorial() {
         settings.hasSeenTutorial = true
@@ -175,7 +147,6 @@ final class AppState {
 
 struct RootView: View {
     @State private var appState = AppState()
-    @State private var showSettings: Bool = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -187,25 +158,6 @@ struct RootView: View {
         .environment(\.palette, palette)
         .preferredColorScheme(appState.settings.themeMode.preferredColorScheme)
         .animation(.easeInOut(duration: 0.22), value: appState.screen)
-        .sheet(isPresented: $showSettings) {
-            SettingsSheet(
-                settings: appState.settings,
-                onTutorial: {
-                    showSettings = false
-                    appState.startTutorial()
-                },
-                onClose: { showSettings = false },
-                onPuzzleEditor: {
-#if DEBUG
-                    showSettings = false
-                    appState.openPuzzleEditor()
-#endif
-                }
-            )
-            .environment(\.palette, palette)
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
     }
 
     @ViewBuilder
@@ -222,7 +174,7 @@ struct RootView: View {
             }
         case .welcome:
             WelcomeScaffold(
-                title: "Welcome to Rootline",
+                title: "Welcome to Mycogrid",
                 tagline: "A cozy loop puzzle for mushroom foragers. Want a quick tour before you dig in?",
                 primaryLabel: "Show me how to play",
                 secondaryLabel: "Jump right in",
@@ -236,17 +188,10 @@ struct RootView: View {
             HomeView(
                 today: appState.todayContext(),
                 onPlayToday: { appState.startToday() },
+                onReplayToday: { appState.replayToday() },
                 onArchive: { appState.openArchive() },
                 onStats: { appState.openStats() },
-                onHowToPlay: { appState.startTutorial() },
-                onSettings: { showSettings = true }
-            )
-            .transition(.opacity)
-        case .difficulty:
-            DifficultyView(
-                selected: appState.settings.tier,
-                onBack: { appState.goHome() },
-                onPick: { tier in appState.startGame(tier: tier) }
+                onHowToPlay: { appState.startTutorial() }
             )
             .transition(.opacity)
         case .play:
@@ -255,8 +200,10 @@ struct RootView: View {
                     board: board,
                     settings: appState.settings,
                     playedDate: appState.playingDate,
+                    isReview: appState.isReviewing,
                     onRecordClear: { appState.recordClear(seconds: $0) },
                     onArchive: { appState.openArchive() },
+                    onReplay: { appState.replayCurrent() },
                     onMenu: {
                         appState.clearSavedProgress()
                         appState.goHome()
@@ -295,11 +242,6 @@ struct RootView: View {
                 onClose: { appState.goHome() }
             )
             .transition(.opacity)
-#if DEBUG
-        case .puzzleEditor:
-            PuzzleEditorView(onClose: { appState.goHome() })
-                .transition(.opacity)
-#endif
         }
     }
 }

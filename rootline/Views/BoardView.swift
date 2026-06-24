@@ -5,7 +5,6 @@ import ShroomKit
 /// Tap maps to the nearest edge within the hit threshold.
 struct BoardView: View {
     @Bindable var board: Board
-    let look: LookVariant
     let interactive: Bool
 
     @Environment(\.palette) private var palette
@@ -13,9 +12,8 @@ struct BoardView: View {
     private var cols: Int { board.puzzle.cols }
     private var rows: Int { board.puzzle.rows }
 
-    init(board: Board, look: LookVariant = .glow, interactive: Bool = true) {
+    init(board: Board, interactive: Bool = true) {
         self.board = board
-        self.look = look
         self.interactive = interactive
     }
 
@@ -52,7 +50,7 @@ struct BoardView: View {
             }
             .modifier(GlowModifier(
                 color: palette.accent,
-                enabled: look == .glow,
+                enabled: true,
                 pulsing: board.isSolved
             ))
 
@@ -116,7 +114,7 @@ struct BoardView: View {
     // MARK: Drawing helpers
 
     private func drawGhosts(ctx: GraphicsContext, layout: BoardLayout) {
-        let ghostColor = palette.sub.opacity(look == .ink ? 0.06 : 0.15)
+        let ghostColor = palette.sub.opacity(0.15)
         var path = Path()
         // Horizontal slots.
         for r in 0...rows {
@@ -148,7 +146,7 @@ struct BoardView: View {
     }
 
     private func drawThreads(ctx: GraphicsContext, layout: BoardLayout) {
-        let stroke = layout.cell * (look == .ink ? 0.08 : 0.13)
+        let stroke = layout.cell * 0.13
         var path = Path()
         for e in board.activeEdges {
             switch e {
