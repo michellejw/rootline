@@ -35,16 +35,5 @@ public enum Tier: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    public var meta: String {
-        switch self {
-        case .sprout:    return "4 × 6 · most clues shown"
-        case .mycelium:  return "5 × 7 · medium clues"
-        case .ancient:   return "6 × 9 · sparse clues"
-        case .oldGrowth: return "7 × 10 · minimal clues"
-        }
-    }
-
     public var shortMeta: String { "\(cols)×\(rows)" }
-
-    public static let `default`: Tier = .mycelium
 }
